@@ -45,6 +45,16 @@ target 'ChatApp' do
       end
     end
 
+    # Fix BoringSSL-GRPC: -GCC_WARN_INHIBIT_ALL_WARNINGS is invalid for arm64-apple-ios-simulator
+    # Clang reads -G as an unsupported flag; replace with -w (suppress warnings)
+    Dir.glob(File.join(__dir__, 'Pods/Target Support Files/BoringSSL-GRPC/*.xcconfig')).each do |xcconfig_path|
+      content = File.read(xcconfig_path)
+      if content.include?('-GCC_WARN_INHIBIT_ALL_WARNINGS')
+        File.write(xcconfig_path, content.gsub('-GCC_WARN_INHIBIT_ALL_WARNINGS', '-w'))
+        puts "Patched BoringSSL-GRPC xcconfig: #{File.basename(xcconfig_path)}"
+      end
+    end
+
     # Patch gRPC basic_seq.h — removes invalid 'template' keyword for Clang compatibility
     [
       'Pods/gRPC-Core/src/core/lib/promise/detail/basic_seq.h',
