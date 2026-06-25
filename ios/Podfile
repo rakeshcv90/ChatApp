@@ -34,6 +34,46 @@ target 'ChatApp' do
         build_config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
         build_config.build_settings['GCC_CXX_LANGUAGE_STANDARD'] = 'c++17'
       end
+
+      if target.name == 'gRPC-Core'
+        target.build_configurations.each do |build_config|
+          build_config.build_settings['GCC_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+          build_config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+          flags = build_config.build_settings['OTHER_CPLUSPLUSFLAGS'] || '$(inherited)'
+          build_config.build_settings['OTHER_CPLUSPLUSFLAGS'] = "#{flags} -Wno-error -Wno-shorten-64-to-32 -Wno-unused-result"
+        end
+      end
+    end
+
+    # Patch gRPC basic_seq.h — removes invalid 'template' keyword for Clang compatibility
+    [
+      'Pods/gRPC-Core/src/core/lib/promise/detail/basic_seq.h',
+      'Pods/gRPC-C++/src/core/lib/promise/detail/basic_seq.h'
+    ].each do |path|
+      full = File.join(__dir__, path)
+      next unless File.exist?(full)
+      content = File.read(full)
+      if content.include?('Traits::template CallSeqFactory')
+        File.write(full, content.gsub('Traits::template CallSeqFactory', 'Traits::CallSeqFactory'))
+        puts "Patched: #{path}"
+      end
+    end
+
+    # Patch gRPC promise_like.h — std::result_of removed in newer standards
+    [
+      'Pods/gRPC-Core/src/core/lib/promise/detail/promise_like.h',
+      'Pods/gRPC-C++/src/core/lib/promise/detail/promise_like.h'
+    ].each do |path|
+      full = File.join(__dir__, path)
+      next unless File.exist?(full)
+      content = File.read(full)
+      if content.include?('std::result_of')
+        patched = content
+          .gsub('typename std::result_of<F()>::type', 'typename std::invoke_result<F>::type')
+          .gsub('std::result_of<F()>::type', 'std::invoke_result<F>::type')
+        File.write(full, patched)
+        puts "Patched: #{path}"
+      end
     end
   end
 end
