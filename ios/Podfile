@@ -41,6 +41,17 @@ target 'ChatApp' do
 
         # Skip build-index generation — speeds up CI significantly
         build_config.build_settings['COMPILER_INDEX_STORE_ENABLE'] = 'NO'
+
+        # Fix for Xcode 16.4: react_native_post_install can store OTHER_CPLUSPLUSFLAGS
+        # and OTHER_CFLAGS as a Ruby Array. Xcode then serialises the Array's .to_s
+        # as a single string "[ -flag1 -flag2, ]" which clang treats as a filename.
+        # Flatten any Array values to a proper space-separated string.
+        ['OTHER_CPLUSPLUSFLAGS', 'OTHER_CFLAGS'].each do |key|
+          val = build_config.build_settings[key]
+          if val.is_a?(Array)
+            build_config.build_settings[key] = val.join(' ')
+          end
+        end
       end
     end
 
