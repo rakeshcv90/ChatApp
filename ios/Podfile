@@ -52,6 +52,13 @@ target 'ChatApp' do
             build_config.build_settings[key] = val.join(' ')
           end
         end
+
+        # For gRPC-Core and gRPC-C++: reset OTHER_CPLUSPLUSFLAGS to $(inherited)
+        # so React Native's injected Array value is discarded at the project level.
+        # xcconfig-level flags (module maps etc.) are still inherited correctly.
+        if target.name == 'gRPC-Core' || target.name == 'gRPC-C++'
+          build_config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -Wno-error'
+        end
       end
     end
 

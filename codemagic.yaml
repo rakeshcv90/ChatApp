@@ -20,6 +20,41 @@ workflows:
           cd ios
           pod install
 
+      - name: Patch Pods for Xcode 16.4 compatibility
+        script: |
+          cd ios
+
+          # 1. gRPC-Core basic_seq.h — remove invalid 'template' keyword (causes xds_wrr_locality.cc error)
+          for f in \
+            "Pods/gRPC-Core/src/core/lib/promise/detail/basic_seq.h" \
+            "Pods/gRPC-C++/src/core/lib/promise/detail/basic_seq.h"; do
+            if [ -f "$f" ]; then
+              sed -i '' 's/Traits::template CallSeqFactory/Traits::CallSeqFactory/g' "$f"
+              echo "Patched basic_seq.h: $f"
+            fi
+          done
+
+          # 2. gRPC-Core promise_like.h — replace removed std::result_of with std::invoke_result
+          for f in \
+            "Pods/gRPC-Core/src/core/lib/promise/detail/promise_like.h" \
+            "Pods/gRPC-C++/src/core/lib/promise/detail/promise_like.h"; do
+            if [ -f "$f" ]; then
+              sed -i '' 's/typename std::result_of<F()>::type/typename std::invoke_result<F>::type/g' "$f"
+              sed -i '' 's/std::result_of<F()>::type/std::invoke_result<F>::type/g' "$f"
+              echo "Patched promise_like.h: $f"
+            fi
+          done
+
+          # 3. BoringSSL-GRPC xcconfigs — remove -GCC_WARN_INHIBIT_ALL_WARNINGS (invalid flag for arm64)
+          for f in "Pods/Target Support Files/BoringSSL-GRPC/"*.xcconfig; do
+            if [ -f "$f" ]; then
+              sed -i '' 's/-GCC_WARN_INHIBIT_ALL_WARNINGS/-w/g' "$f"
+              echo "Patched BoringSSL xcconfig: $f"
+            fi
+          done
+
+          echo "All patches applied successfully"
+
       - name: Build iOS (device - verify compilation)
         script: |
           set -o pipefail
