@@ -7,6 +7,8 @@ import {
   StatusBar,
   Animated,
   Image,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import {RTCView, MediaStream} from 'react-native-webrtc';
 import {scale, verticalScale, moderateScale} from 'react-native-size-matters';
@@ -23,6 +25,7 @@ import {
   switchCamera,
   requestMediaPermissions,
   toggleSpeaker,
+  setBluetoothAudio,
   startInCallManager,
   stopInCallManager,
 } from '../services/CallService';
@@ -52,6 +55,7 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
   const [muted, setMuted] = useState(false);
   const [speaker, setSpeaker] = useState(callType === 'video');
   const [videoOff, setVideoOff] = useState(false);
+  const [bluetooth, setBluetooth] = useState(false);
   const [callId, setCallId] = useState<string>(incomingCallId || '');
 
   // Streams
@@ -71,9 +75,16 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
     let mounted = true;
 
     const setupCall = async () => {
-      // Start InCallManager and apply initial speaker state
+      // Request Bluetooth permission on Android 12+ so audio can route to headsets
+      if (Platform.OS === 'android' && Platform.Version >= 31) {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        );
+      }
+
+      // Start InCallManager — auto:true lets it route to Bluetooth automatically
       startInCallManager(callType);
-      // Video calls default to speaker on; audio calls default to earpiece
+      // Video calls default to speaker on; audio calls default to earpiece/bluetooth
       toggleSpeaker(callType === 'video');
 
       const permGranted = await requestMediaPermissions(callType === 'video');
@@ -259,6 +270,20 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
     switchCamera();
   };
 
+  const handleToggleBluetooth = () => {
+    const next = !bluetooth;
+    setBluetooth(next);
+    setBluetoothAudio(next);
+    if (next) {
+      setSpeaker(false);
+      toggleSpeaker(false);
+    } else {
+      const fallback = callType === 'video';
+      setSpeaker(fallback);
+      toggleSpeaker(fallback);
+    }
+  };
+
   return (
     <View style={[styles.container, {backgroundColor: '#0F172A'}]}>
       <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent />
@@ -403,6 +428,20 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
               />
             </TouchableOpacity>
           )}
+
+          {/* Bluetooth button */}
+          <TouchableOpacity
+            style={[
+              styles.controlBtn,
+              {backgroundColor: bluetooth ? 'white' : 'rgba(255,255,255,0.15)'},
+            ]}
+            onPress={handleToggleBluetooth}>
+            <Ionicons
+              name="bluetooth"
+              size={moderateScale(24)}
+              color={bluetooth ? '#0F172A' : 'white'}
+            />
+          </TouchableOpacity>
 
           {/* Speaker button */}
           <TouchableOpacity

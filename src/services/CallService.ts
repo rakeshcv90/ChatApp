@@ -100,9 +100,18 @@ export async function getLocalStream(
 ): Promise<MediaStream | null> {
   try {
     const stream = await mediaDevices.getUserMedia({
-      audio: true,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      } as any,
       video: isVideo
-        ? {facingMode: 'user', width: 640, height: 480, frameRate: 30}
+        ? {
+            facingMode: 'user',
+            width: {min: 640, ideal: 1280, max: 1920},
+            height: {min: 480, ideal: 720, max: 1080},
+            frameRate: {min: 15, ideal: 30, max: 60},
+          }
         : false,
     });
     return stream as MediaStream;
@@ -510,8 +519,17 @@ export function toggleSpeaker(speakerOn: boolean): void {
   InCallManager.setForceSpeakerphoneOn(speakerOn);
 }
 
+export function setBluetoothAudio(enabled: boolean): void {
+  if (enabled) {
+    // Stop forcing speaker so Android can route to Bluetooth SCO
+    InCallManager.setForceSpeakerphoneOn(false);
+  }
+}
+
 export function startInCallManager(mediaType: 'audio' | 'video'): void {
-  InCallManager.start({media: mediaType});
+  InCallManager.start({media: mediaType, auto: true});
+  // Allow Android to route audio to Bluetooth SCO automatically
+  InCallManager.setForceSpeakerphoneOn(false);
 }
 
 export function stopInCallManager(): void {
