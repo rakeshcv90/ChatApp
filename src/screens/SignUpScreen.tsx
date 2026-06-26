@@ -198,7 +198,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({navigation, route}) => {
       }
       
       console.log('[SignUp] Navigating to Home.');
-      navigation.replace('Home');
+      navigation.reset({index: 0, routes: [{name: 'Home'}]});
     } catch (error) {
       console.error('[SignUp] Save user profile error:', error);
       setLoading(false);

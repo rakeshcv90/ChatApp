@@ -180,9 +180,9 @@ const OTPScreen: React.FC<OTPScreenProps> = ({ navigation, route }) => {
         }
 
         if (profileExists) {
-          navigation.replace('Home');
+          navigation.reset({index: 0, routes: [{name: 'Home'}]});
         } else {
-          navigation.replace('SignUp', {isNewUser: true});
+          navigation.reset({index: 0, routes: [{name: 'SignUp', params: {isNewUser: true}}]});
         }
       } catch (error: any) {
         setLoading(false);
