@@ -6,7 +6,6 @@ import notifee, {
   AndroidImportance,
   AndroidCategory,
   AndroidVisibility,
-  EventType,
   AndroidStyle,
 } from '@notifee/react-native';
 
@@ -176,12 +175,10 @@ export function setupForegroundHandler(): () => void {
       const data = remoteMessage.data;
 
       if (data?.type === 'call') {
-        // Show full-screen call notification even in foreground
-        await displayIncomingCallNotification(
-          data.callId as string,
-          (data.callerName as string) || 'Someone',
-          (data.callType as string) || 'audio',
-        );
+        // App is in foreground — the Firestore listener in App.tsx already
+        // navigates to IncomingCallScreen. Do NOT show a notification here
+        // or you get double ringing (in-app UI + notification).
+        return;
       } else if (data?.type === 'message') {
         // Show chat notification in foreground (instead of blocking Alert)
         await displayMessageNotification(

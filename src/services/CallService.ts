@@ -26,10 +26,25 @@ import {PermissionsAndroid, Platform} from 'react-native';
 import InCallManager from 'react-native-incall-manager';
 
 // ─── WebRTC ICE server configuration ──────────────────────────────────────────
-const ICE_SERVERS: Array<{urls: string}> = [
+const ICE_SERVERS = [
   {urls: 'stun:stun.l.google.com:19302'},
   {urls: 'stun:stun1.l.google.com:19302'},
-  {urls: 'stun:stun2.l.google.com:19302'},
+  // TURN servers — required for calls across different networks / behind NAT
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
 ];
 
 // Keep references alive for the active call
@@ -106,6 +121,13 @@ function createPeerConnection(
   (pc as any).ontrack = (event: any) => {
     if (event.streams && event.streams[0]) {
       remoteStream = event.streams[0] as MediaStream;
+      onRemoteStream(remoteStream);
+    } else if (event.track) {
+      // react-native-webrtc may not always populate event.streams
+      if (!remoteStream) {
+        remoteStream = new MediaStream(undefined as any);
+      }
+      (remoteStream as any).addTrack(event.track);
       onRemoteStream(remoteStream);
     }
   };

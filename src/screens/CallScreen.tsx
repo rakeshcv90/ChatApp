@@ -7,7 +7,6 @@ import {
   StatusBar,
   Animated,
   Image,
-  Platform,
 } from 'react-native';
 import {RTCView, MediaStream} from 'react-native-webrtc';
 import {scale, verticalScale, moderateScale} from 'react-native-size-matters';
@@ -72,9 +71,11 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
     let mounted = true;
 
     const setupCall = async () => {
-      // Start InCallManager to handle audio routing properly
+      // Start InCallManager and apply initial speaker state
       startInCallManager(callType);
-      
+      // Video calls default to speaker on; audio calls default to earpiece
+      toggleSpeaker(callType === 'video');
+
       const permGranted = await requestMediaPermissions(callType === 'video');
       if (!permGranted) {
         console.warn('[CallScreen] Permissions denied, requesting getUserMedia anyway...');

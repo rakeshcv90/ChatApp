@@ -31,11 +31,22 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            GCC_TREAT_WARNINGS_AS_ERRORS=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
             2>&1 | tee /tmp/xcode_build.log
           BUILD_RESULT=${PIPESTATUS[0]}
           if [ $BUILD_RESULT -ne 0 ]; then
-            echo "=== COMPILER ERRORS ==="
-            grep " error:" /tmp/xcode_build.log | grep -v "^note:" | head -80
+            echo "=== FIRST 5 ERRORS ==="
+            grep -n " error:" /tmp/xcode_build.log | grep -v "^[0-9]*:note:" | head -5
+            echo ""
+            echo "=== FULL ERROR CONTEXT (first error) ==="
+            FIRST_ERR=$(grep -n " error:" /tmp/xcode_build.log | grep -v "^[0-9]*:note:" | head -1 | cut -d: -f1)
+            if [ -n "$FIRST_ERR" ]; then
+              START=$((FIRST_ERR - 5))
+              END=$((FIRST_ERR + 20))
+              sed -n "${START},${END}p" /tmp/xcode_build.log
+            fi
           fi
           exit $BUILD_RESULT
 

@@ -17,9 +17,10 @@ admin.initializeApp(
 // ─── OTP: Send ────────────────────────────────────────────────────────────────
 // Generates a 6-digit OTP, stores it hashed in Firestore, and sends it via SMS.
 //
-// SMS provider: 2factor.in
-// Set the API key with:
-//   firebase functions:config:set twofactor.api_key="YOUR_2FACTOR_API_KEY"
+// SMS provider: 2factor.in (Indian numbers +91 only)
+// Set the API key by creating functions/.env with:
+//   TWOFACTOR_API_KEY=your_key_here
+// Then deploy: firebase deploy --only functions
 //
 // During development (no API key set) the OTP is printed to Firebase console logs.
 exports.sendOTP = functions.https.onCall(async data => {
@@ -56,8 +57,12 @@ exports.sendOTP = functions.https.onCall(async data => {
   if (apiKey) {
     // 2factor.in expects 10-digit number (strip +91 country code)
     const digits = phoneNumber.replace(/^\+91/, '');
-    // API: GET /API/V1/{api_key}/SMS/{mobile}/{otp}
-    const url = `https://2factor.in/API/V1/${apiKey}/SMS/${digits}/${otp}`;
+    // If a DLT-registered template name is set, append it so SMS is delivered (not voice fallback).
+    // Set TWOFACTOR_OTP_TEMPLATE in functions/.env after creating the template in 2factor.in dashboard.
+    const template = process.env.TWOFACTOR_OTP_TEMPLATE;
+    const url = template
+      ? `https://2factor.in/API/V1/${apiKey}/SMS/${digits}/${otp}/${template}`
+      : `https://2factor.in/API/V1/${apiKey}/SMS/${digits}/${otp}`;
     try {
       const res = await fetch(url);
       const body = await res.json();
@@ -70,7 +75,7 @@ exports.sendOTP = functions.https.onCall(async data => {
       console.error('[OTP] Failed to reach 2factor.in:', err.message);
     }
   } else {
-    console.warn('[OTP] twofactor.api_key not configured — OTP only in logs above.');
+    console.warn('[OTP] TWOFACTOR_API_KEY not configured — OTP only in logs above.');
   }
 
   return {success: true};

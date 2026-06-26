@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useRef} from 'react';
 import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useTheme} from '../context/ThemeContext';
@@ -25,6 +25,21 @@ interface AppStackProps {
 const AppStack: React.FC<AppStackProps> = ({navRef}) => {
   const {colors} = useTheme();
   const {user, authLoading} = useAuth();
+  const prevUserRef = useRef(user);
+
+  // When user signs out (user goes from non-null to null), reset stack to Login
+  useEffect(() => {
+    const wasLoggedIn = prevUserRef.current !== null;
+    const isNowLoggedOut = user === null;
+    prevUserRef.current = user;
+
+    if (wasLoggedIn && isNowLoggedOut && navRef?.current?.isReady()) {
+      navRef.current.reset({
+        index: 0,
+        routes: [{name: 'Login'}],
+      });
+    }
+  }, [user, navRef]);
 
   // While Firebase resolves the persisted auth session, show Splash
   if (authLoading) {
@@ -40,7 +55,6 @@ const AppStack: React.FC<AppStackProps> = ({navRef}) => {
   return (
     <NavigationContainer ref={navRef}>
       <Stack.Navigator
-        // If user is already logged in skip auth screens, go straight to Home
         initialRouteName={user ? 'Home' : 'Splash'}
         screenOptions={{
           headerShown: false,

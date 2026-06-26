@@ -45,15 +45,13 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
     return unsubscribe;
   }, []);
 
-  // Calls the Cloud Function which generates an OTP and sends it via SMS.
-  // No SHA fingerprints or APNs required.
+  // Calls the Cloud Function which generates an OTP and sends it via 2factor.in.
   const sendOTP = useCallback(async (phoneNumber: string): Promise<void> => {
     const sendOTPFn = functions().httpsCallable('sendOTP');
     await sendOTPFn({phoneNumber});
   }, []);
 
-  // Calls the Cloud Function to verify the OTP. On success the function returns
-  // a Firebase custom token; we sign in with it to get a proper FirebaseUser.
+  // Calls the Cloud Function to verify the OTP and returns a Firebase custom token.
   const confirmOTP = useCallback(
     async (code: string, phoneNumber: string): Promise<FirebaseAuthTypes.UserCredential> => {
       const verifyOTPFn = functions().httpsCallable('verifyOTP');
@@ -77,7 +75,17 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
   );
 
   const signOut = useCallback(async () => {
-    await auth().signOut();
+    try {
+      await auth().signOut();
+    } catch (e: any) {
+      if (e.code === 'auth/no-current-user') {
+        // Firebase has no session but React state still shows a user —
+        // clear it manually so navigation resets to Login.
+        setUser(null);
+        return;
+      }
+      throw e;
+    }
   }, []);
 
   const value = useMemo<AuthContextType>(
