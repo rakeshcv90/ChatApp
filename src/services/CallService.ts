@@ -27,21 +27,21 @@ import InCallManager from 'react-native-incall-manager';
 
 // ─── WebRTC ICE server configuration ──────────────────────────────────────────
 const ICE_SERVERS = [
-  {urls: 'stun:stun.l.google.com:19302'},
-  {urls: 'stun:stun1.l.google.com:19302'},
-  // TURN servers — required for calls across different networks / behind NAT
   {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
+    urls: [
+      'stun:stun.l.google.com:19302',
+      'stun:stun1.l.google.com:19302',
+      'stun:stun2.l.google.com:19302',
+    ],
   },
   {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    // openrelay public credentials are rate-limited — replace with personal
+    // credentials from metered.ca free tier when ready for production
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443',
+      'turn:openrelay.metered.ca:443?transport=tcp',
+    ],
     username: 'openrelayproject',
     credential: 'openrelayproject',
   },
@@ -115,7 +115,11 @@ function createPeerConnection(
   onRemoteStream: (stream: MediaStream) => void,
   onConnectionStateChange?: (state: string) => void,
 ): RTCPeerConnection {
-  const pc = new RTCPeerConnection({iceServers: ICE_SERVERS} as any);
+  const pc = new RTCPeerConnection({
+    iceServers: ICE_SERVERS,
+    iceCandidatePoolSize: 10,
+    // iceTransportPolicy: 'relay', // uncomment to force TURN only (testing only)
+  } as any);
 
   // Pre-create remote stream so we have a stable URL regardless of whether
   // event.streams is populated (it is often empty on Android release/Hermes).
@@ -133,18 +137,22 @@ function createPeerConnection(
     onRemoteStream(remoteStream!);
   };
 
-  // Monitor connection state
+  (pc as any).onicegatheringstatechange = () => {
+    console.log('[ICE] Gathering state:', (pc as any).iceGatheringState);
+  };
+
+  (pc as any).onsignalingstatechange = () => {
+    console.log('[ICE] Signaling state:', (pc as any).signalingState);
+  };
+
+  (pc as any).oniceconnectionstatechange = () => {
+    console.log('[ICE] Connection state:', (pc as any).iceConnectionState);
+  };
+
   (pc as any).onconnectionstatechange = () => {
     const state = (pc as any).connectionState;
     console.log('[CallService] Connection state:', state);
     onConnectionStateChange?.(state);
-  };
-
-  (pc as any).oniceconnectionstatechange = () => {
-    console.log(
-      '[CallService] ICE connection state:',
-      (pc as any).iceConnectionState,
-    );
   };
 
   return pc;
@@ -204,18 +212,22 @@ export async function startCall(
   // 5. Collect ICE candidates into offerCandidates sub-collection
   (peerConnection as any).onicecandidate = (event: any) => {
     if (event.candidate) {
+      console.log('[ICE Candidate - offer]', event.candidate.candidate);
       callRef
         .collection('offerCandidates')
         .add(event.candidate.toJSON())
         .catch(err =>
           console.error('[CallService] Error adding offer candidate:', err),
         );
+    } else {
+      console.log('[ICE] Offer candidate gathering complete');
     }
   };
 
   // 6. Create offer
   const offerDescription = await peerConnection.createOffer({} as any);
   await peerConnection.setLocalDescription(offerDescription);
+  console.log('[SDP] Offer:', offerDescription.sdp);
 
   // 7. Write call doc with offer
   await callRef.set({
@@ -314,12 +326,15 @@ export async function answerCall(
   // 4. Collect ICE candidates into answerCandidates sub-collection
   (peerConnection as any).onicecandidate = (event: any) => {
     if (event.candidate) {
+      console.log('[ICE Candidate - answer]', event.candidate.candidate);
       callRef
         .collection('answerCandidates')
         .add(event.candidate.toJSON())
         .catch(err =>
           console.error('[CallService] Error adding answer candidate:', err),
         );
+    } else {
+      console.log('[ICE] Answer candidate gathering complete');
     }
   };
 
@@ -338,6 +353,7 @@ export async function answerCall(
   // 7. Create answer
   const answerDescription = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answerDescription);
+  console.log('[SDP] Answer:', answerDescription.sdp);
 
   // 8. Write answer to Firestore
   await callRef.update({
