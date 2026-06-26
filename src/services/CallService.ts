@@ -27,20 +27,24 @@ import InCallManager from 'react-native-incall-manager';
 
 // ─── WebRTC ICE server configuration ──────────────────────────────────────────
 const ICE_SERVERS = [
+  {urls: 'stun:stun.relay.metered.ca:80'},
   {
-    urls: [
-      'stun:stun.l.google.com:19302',
-      'stun:stun1.l.google.com:19302',
-      'stun:stun2.l.google.com:19302',
-    ],
+    urls: 'turn:global.relay.metered.ca:80',
+    username: '5e4f2355bc0700f32db24194',
+    credential: 'fmcs6bzFUXpljpty',
   },
   {
-    urls: [
-      'turn:a.relay.metered.ca:80',
-      'turn:a.relay.metered.ca:443',
-      'turn:a.relay.metered.ca:443?transport=tcp',
-      'turns:a.relay.metered.ca:443?transport=tcp',
-    ],
+    urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+    username: '5e4f2355bc0700f32db24194',
+    credential: 'fmcs6bzFUXpljpty',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:443',
+    username: '5e4f2355bc0700f32db24194',
+    credential: 'fmcs6bzFUXpljpty',
+  },
+  {
+    urls: 'turns:global.relay.metered.ca:443?transport=tcp',
     username: '5e4f2355bc0700f32db24194',
     credential: 'fmcs6bzFUXpljpty',
   },
