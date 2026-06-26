@@ -519,17 +519,11 @@ export function toggleSpeaker(speakerOn: boolean): void {
   InCallManager.setForceSpeakerphoneOn(speakerOn);
 }
 
-export function setBluetoothAudio(enabled: boolean): void {
-  if (enabled) {
-    // Stop forcing speaker so Android can route to Bluetooth SCO
-    InCallManager.setForceSpeakerphoneOn(false);
-  }
-}
-
 export function startInCallManager(mediaType: 'audio' | 'video'): void {
+  // auto: true lets InCallManager manage audio routing including Bluetooth SCO.
+  // Do NOT call setForceSpeakerphoneOn here — forcing speaker overrides Bluetooth.
+  // Android will auto-route to Bluetooth headset when one is connected.
   InCallManager.start({media: mediaType, auto: true});
-  // Allow Android to route audio to Bluetooth SCO automatically
-  InCallManager.setForceSpeakerphoneOn(false);
 }
 
 export function stopInCallManager(): void {

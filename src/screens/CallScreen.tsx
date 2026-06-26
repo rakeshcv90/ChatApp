@@ -25,7 +25,6 @@ import {
   switchCamera,
   requestMediaPermissions,
   toggleSpeaker,
-  setBluetoothAudio,
   startInCallManager,
   stopInCallManager,
 } from '../services/CallService';
@@ -55,7 +54,6 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
   const [muted, setMuted] = useState(false);
   const [speaker, setSpeaker] = useState(callType === 'video');
   const [videoOff, setVideoOff] = useState(false);
-  const [bluetooth, setBluetooth] = useState(false);
   const [callId, setCallId] = useState<string>(incomingCallId || '');
 
   // Streams
@@ -270,20 +268,6 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
     switchCamera();
   };
 
-  const handleToggleBluetooth = () => {
-    const next = !bluetooth;
-    setBluetooth(next);
-    setBluetoothAudio(next);
-    if (next) {
-      setSpeaker(false);
-      toggleSpeaker(false);
-    } else {
-      const fallback = callType === 'video';
-      setSpeaker(fallback);
-      toggleSpeaker(fallback);
-    }
-  };
-
   return (
     <View style={[styles.container, {backgroundColor: '#0F172A'}]}>
       <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent />
@@ -428,20 +412,6 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
               />
             </TouchableOpacity>
           )}
-
-          {/* Bluetooth button */}
-          <TouchableOpacity
-            style={[
-              styles.controlBtn,
-              {backgroundColor: bluetooth ? 'white' : 'rgba(255,255,255,0.15)'},
-            ]}
-            onPress={handleToggleBluetooth}>
-            <Ionicons
-              name="bluetooth"
-              size={moderateScale(24)}
-              color={bluetooth ? '#0F172A' : 'white'}
-            />
-          </TouchableOpacity>
 
           {/* Speaker button */}
           <TouchableOpacity
