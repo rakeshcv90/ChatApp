@@ -45,10 +45,11 @@ workflows:
             fi
           done
 
-          # 3. BoringSSL-GRPC xcconfigs — remove -GCC_WARN_INHIBIT_ALL_WARNINGS (invalid flag for arm64)
-          for f in "Pods/Target Support Files/BoringSSL-GRPC/"*.xcconfig; do
-            if [ -f "$f" ]; then
-              sed -i '' 's/-GCC_WARN_INHIBIT_ALL_WARNINGS/-w/g' "$f"
+          # 3. BoringSSL xcconfigs — remove -GCC_WARN_INHIBIT_ALL_WARNINGS (clang reads -G as invalid on arm64)
+          # Use find to cover all BoringSSL subspecs (BoringSSL-GRPC, BoringSSL-GRPC-openssl_grpc, etc.)
+          find . -path "*/Target Support Files/*BoringSSL*/*.xcconfig" | while IFS= read -r f; do
+            if grep -q "GCC_WARN_INHIBIT_ALL_WARNINGS" "$f"; then
+              sed -i '' 's/-GCC_WARN_INHIBIT_ALL_WARNINGS//g' "$f"
               echo "Patched BoringSSL xcconfig: $f"
             fi
           done

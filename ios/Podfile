@@ -59,16 +59,26 @@ target 'ChatApp' do
         if target.name == 'gRPC-Core' || target.name == 'gRPC-C++'
           build_config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '$(inherited) -Wno-error'
         end
+
+        # For BoringSSL-GRPC: override OTHER_CFLAGS WITHOUT $(inherited) so Xcode
+        # ignores xcconfig values entirely. BoringSSL's xcconfig sets
+        # -GCC_WARN_INHIBIT_ALL_WARNINGS which clang rejects on arm64 (parsed as -G).
+        # Setting directly here (highest priority, no inherited) replaces it with -w.
+        if target.name.start_with?('BoringSSL-GRPC')
+          build_config.build_settings['OTHER_CFLAGS'] = '-w'
+        end
       end
     end
 
     # Fix BoringSSL-GRPC: -GCC_WARN_INHIBIT_ALL_WARNINGS is invalid for arm64-apple-ios-simulator
-    # Clang reads -G as an unsupported flag; replace with -w (suppress warnings)
-    Dir.glob(File.join(__dir__, 'Pods/Target Support Files/BoringSSL-GRPC/*.xcconfig')).each do |xcconfig_path|
+    # Clang reads -G as an unsupported flag; remove it. All BoringSSL targets (including
+    # subspecs like BoringSSL-GRPC-openssl_grpc) are covered by the ** glob below.
+    # The build-settings override above is the primary fix; this is belt-and-suspenders.
+    Dir.glob(File.join(__dir__, 'Pods/Target Support Files/**/*.xcconfig')).select { |f| f.include?('BoringSSL') }.each do |xcconfig_path|
       content = File.read(xcconfig_path)
       if content.include?('-GCC_WARN_INHIBIT_ALL_WARNINGS')
-        File.write(xcconfig_path, content.gsub('-GCC_WARN_INHIBIT_ALL_WARNINGS', '-w'))
-        puts "Patched BoringSSL-GRPC xcconfig: #{File.basename(xcconfig_path)}"
+        File.write(xcconfig_path, content.gsub('-GCC_WARN_INHIBIT_ALL_WARNINGS', ''))
+        puts "Patched BoringSSL xcconfig: #{File.basename(xcconfig_path)}"
       end
     end
 
