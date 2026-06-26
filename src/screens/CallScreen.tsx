@@ -264,7 +264,7 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
       <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent />
 
       {/* ── Remote Video (fullscreen) ── */}
-      {callType === 'video' && remoteStreamUrl && callState === 'connected' ? (
+      {callType === 'video' && remoteStreamUrl ? (
         <RTCView
           streamURL={remoteStreamUrl}
           style={styles.remoteVideo}
@@ -287,8 +287,7 @@ const CallScreen: React.FC<CallScreenProps> = ({navigation, route}) => {
       {/* ── Local Video PIP ── */}
       {callType === 'video' &&
         localStreamUrl &&
-        !videoOff &&
-        callState === 'connected' && (
+        !videoOff && (
           <TouchableOpacity
             style={[styles.pipContainer, {top: insets.top + verticalScale(16)}]}
             onPress={handleSwitchCamera}

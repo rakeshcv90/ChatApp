@@ -117,19 +117,20 @@ function createPeerConnection(
 ): RTCPeerConnection {
   const pc = new RTCPeerConnection({iceServers: ICE_SERVERS} as any);
 
-  // When we receive a remote track, build the remote stream
+  // Pre-create remote stream so we have a stable URL regardless of whether
+  // event.streams is populated (it is often empty on Android release/Hermes).
+  remoteStream = new MediaStream();
+
   (pc as any).ontrack = (event: any) => {
     if (event.streams && event.streams[0]) {
-      remoteStream = event.streams[0] as MediaStream;
-      onRemoteStream(remoteStream);
+      // Copy tracks into our own stream — avoids stale URL from Hermes optimization
+      event.streams[0].getTracks().forEach((track: any) => {
+        (remoteStream as any).addTrack(track);
+      });
     } else if (event.track) {
-      // react-native-webrtc may not always populate event.streams
-      if (!remoteStream) {
-        remoteStream = new MediaStream(undefined as any);
-      }
       (remoteStream as any).addTrack(event.track);
-      onRemoteStream(remoteStream);
     }
+    onRemoteStream(remoteStream!);
   };
 
   // Monitor connection state
