@@ -35,15 +35,14 @@ const ICE_SERVERS = [
     ],
   },
   {
-    // openrelay public credentials are rate-limited — replace with personal
-    // credentials from metered.ca free tier when ready for production
     urls: [
-      'turn:openrelay.metered.ca:80',
-      'turn:openrelay.metered.ca:443',
-      'turn:openrelay.metered.ca:443?transport=tcp',
+      'turn:a.relay.metered.ca:80',
+      'turn:a.relay.metered.ca:443',
+      'turn:a.relay.metered.ca:443?transport=tcp',
+      'turns:a.relay.metered.ca:443?transport=tcp',
     ],
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
+    username: '5e4f2355bc0700f32db24194',
+    credential: 'fmcs6bzFUXpljpty',
   },
 ];
 
